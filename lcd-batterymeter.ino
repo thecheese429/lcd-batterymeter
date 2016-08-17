@@ -16,6 +16,7 @@ template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg);
 
 
 
+
 double now = 0;
 double lastTime = 0;
 
@@ -26,11 +27,6 @@ double capacity = 0;
 
 boolean zeroVolts = 0;
 boolean newCell = 0;
-
-// char[16] topLeft = char(0);
-// char[16] topRight = char(0);
-// char[16] bottomLeft = char(0);
-// char[16] bottomRight char(0);
 
 byte state = 0; //keep track of the current state of the program
 
@@ -110,11 +106,13 @@ void readResistance(){
   
 	digitalWrite(GATE1, HIGH);
 	digitalWrite(GATE2, HIGH);
-	
+	delay(10);
 	updateMeasurements();
 	v1 = voltage;
 	i1 = current;
+	delay(10);
 	digitalWrite(GATE1, LOW);
+	delay(10);
 	updateMeasurements();
 	v2 = voltage;
 	i2 = current;
@@ -132,6 +130,8 @@ void setup() {
   digitalWrite(GATE2, LOW);
   
   lcd.begin(16, 2);
+	lcd.clear();
+	lcd << "hello";
   lcd.createChar(0, ohm);
 	delay(1000);
   
@@ -158,11 +158,13 @@ void loop() {
 	lcd << "Insert battery";
 	lcd.setCursor(0,1);
 	lcd << "then press reset";
-		while(voltage<.5){
+		while(state == 1){
 			updateMeasurements();
 			delay(50);
+			if(voltage>1){
+				state = 2;
+			}
 		}
-		state = 2;
 	}
 	else if(state == 2){ //This is the state after a battery has been inserted, after starting with no battery
 		//prompt for a reset
@@ -264,21 +266,8 @@ void loop() {
 		}
 	}                    
 	else if(state == 9){ //This is the state after the measurement is complete and a new battery has been inserted
-		lcd.clear();
-		lcd << "Press reset";
+		lcd.setCursor(0,0);
+		lcd << "Reset to begin  ";
 		while(state == 9){
-			lcd.setCursor(0,1);
-			lcd << "V = " << voltage << "v";
-			delay(100);
-			updateMeasurements();
 		}
-	}
-	else if(state == 10){ //This is the state in which the
-		
-	}
-	else if(state == 11){ //This is the state in which the
-		
-	}
-	
-	
 }
