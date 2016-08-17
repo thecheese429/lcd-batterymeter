@@ -250,7 +250,7 @@ void loop() {
 		lcd.clear();
 		lcd << "Insert new cell";
 		lcd.setCursor(0,1);
-		lcd << capacity << "mAh";
+		lcd << (int)capacity << "mAh";
 		lcd.setCursor(15,1);
 		lcd.rightToLeft();
 		lcd << "R=" << cellResistance;
@@ -270,4 +270,5 @@ void loop() {
 		lcd << "Reset to begin  ";
 		while(state == 9){
 		}
+	}
 }
