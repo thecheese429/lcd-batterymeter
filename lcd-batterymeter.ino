@@ -12,6 +12,7 @@ template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg);
 #define CONTRASTPIN 9 //The pin connected to the contrast on the LCD. Must have a PWM output
 #define RESCHECKVOLT 3.5 //the resistance check will occur as soon as the voltage drops below this value
 #define MINSTART 4.10		//This is the minimum voltage on a cell for the test to begin
+#define VOLTREF 5		//Measure the voltage on your 5V reference pin, and put that value here. 
 
 
 
@@ -47,8 +48,8 @@ LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
 
 void updateDisplay(){
   long currTime = now;
-	int hourTens = currTime/36000000;
-	currTime -= hourTens * 36000000;
+	int hourTens = currTime/36000000;		//This is a very ugly way to get the digits to print the time.
+	currTime -= hourTens * 36000000;		//don't knock it. It works. Slowly.
 	int hourOnes = currTime / 3600000;
 	currTime -= hourOnes * 3600000;
 	int minuteTens = currTime / 600000;
@@ -88,13 +89,13 @@ double capacityCalc(){
 
 void updateMeasurements(){
 	int voltRaw = analogRead(VIN);		//read the values from the pins without doing any math
-	int shuntRaw = analogRead(SHUNT); //so that the values are read as close to simultaneous as possible
+	int shuntRaw = analogRead(SHUNT); 	//so that the values are read as close to simultaneously as possible
 	
 	lastTime = now;		//shift now back to lastTime
 	now = millis();		//keep track of when the measurements were made
 	
-	voltage = (double)voltRaw *5/1024;
-	current = (double)(voltRaw - shuntRaw)*5/1024 / RES;
+	voltage = (double)voltRaw *VOLTREF/1024;
+	current = (double)(voltRaw - shuntRaw)*VOLTREF/1024 / RES;
 	
 }
 
