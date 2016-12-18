@@ -11,10 +11,9 @@ template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg);
 #define CONTRAST 20			//The contrast level. Change the value between 0 and 255 if you don't see anything
 #define CONTRASTPIN 9		//The pin connected to the contrast on the LCD. Pin must have a PWM output
 #define RESCHECKVOLT 3.5	//the resistance check will occur as soon as the voltage drops below this value
-#define RESCHECKDELAY 200	//this is the number of milliseconds delayed between steps in the resistance check
-#define MINSTART 4.10		//This is the minimum voltage on a cell for the test to begin
-#define VOLTREF 5			//Measure the voltage on your 5V reference pin, and put that value here. 
-
+#define MINSTART  4.10		//This is the minimum voltage on a cell for the test to begin
+#define VOLTREF 5			// Used to compensate for an inaccurate 5V reference pin. Measure the voltage on the 5v pin and put it here.
+#define RESCHECKNUM 75		// The number of data points gathered in the resistance check
 
 
 
@@ -93,43 +92,72 @@ void updateMeasurements(){
 }
 
 void readResistance(){
-	double v[3];
-	double i[3];
-	
+	double v[RESCHECKNUM];
+	double i[RESCHECKNUM];
+	byte checkMode;	
 	int Vindex = 0;
 	int Iindex = 0;
 	int NumberOfResistanceChecks = 0;
-  
+	lcd.clear();
+	lcd << "Checking resist.";
+	
+	for(int x = 0; x<RESCHECKNUM; x++)
+	{
+		checkMode = random(1,5);
+		if(checkMode == 1)
+		{
+			digitalWrite(GATE1, HIGH);
+			digitalWrite(GATE2, HIGH);
+			lcd.setCursor(0,1);
+			lcd << "ON  ON  ";
+		}
+		else if(checkMode == 2)
+		{
+			digitalWrite(GATE1, LOW);
+			digitalWrite(GATE2, HIGH);
+			lcd.setCursor(0,1);
+			lcd << "ON  OFF ";
+		}
+		else if(checkMode == 3)
+		{
+			digitalWrite(GATE1, HIGH);
+			digitalWrite(GATE2, LOW);
+			lcd.setCursor(0,1);
+			lcd << "OFF ON ";
+		}
+		else
+		{
+			digitalWrite(GATE1, LOW);
+			digitalWrite(GATE2, LOW);
+			lcd.setCursor(0,1);;
+			lcd << "OFF OFF";
+		}
+		delay(INTERVAL);
+		updateMeasurements();
+		capacity += capacityCalc();
+		v[Vindex++] = voltage;
+		i[Iindex++] = current;
+	}
+
 	digitalWrite(GATE1, HIGH);
 	digitalWrite(GATE2, HIGH);
-	delay(RESCHECKDELAY);
-	updateMeasurements();
-	v[Vindex++] = voltage;
-	i[Iindex++] = current;
 	
-	digitalWrite(GATE1, LOW);		
-	delay(RESCHECKDELAY);
-	updateMeasurements();
-	v[Vindex++] = voltage;
-	i[Iindex++] = current;
-	
-	digitalWrite(GATE2, LOW);		
-	delay(RESCHECKDELAY);
-	updateMeasurements();
-	v[Vindex++] = voltage;
-	i[Iindex++] = current;
-
-	for(int x = 0; x<3; x++){
-		for(int y = 0; y<x; y++){
+	for(int x = RESCHECKNUM-1; x>=1; x--){
+		lcd.setCursor(0,0);
+		lcd << v[x] << "v, " << i[x] << "A vs.";
+		for(int y = x-1; y>=0; y--){
 			if((v[x] != v[y]) && (i[x] != i[y])){
 				NumberOfResistanceChecks++;
+				lcd.setCursor(0,1);
+				lcd << v[y] << "v, " << i[y] << "A  ";
 				cellResistance += (v[x] - v[y])/(i[y] - i[x]);
 			}
 		}
 	}
 	cellResistance /= NumberOfResistanceChecks;
-	digitalWrite(GATE1, HIGH);
-	digitalWrite(GATE2, HIGH);
+	updateMeasurements();
+	capacity += capacityCalc();
+
 	
 }
 
@@ -147,7 +175,7 @@ void setup() {
 	lcd.clear();
 	lcd << "hello";
 	lcd.createChar(0, ohm);
-	delay(1000);
+	delay(700);
   
 }
 
@@ -220,9 +248,6 @@ void loop() {
 		}
 	}					 
 	else if(state == 5){ //This is the state in which the resistance is measured
-		lcd.clear();
-		lcd << "Testing res";
-		delay(1000);
 		readResistance();
 		if(cellResistance != 0){
 			state = 6;
