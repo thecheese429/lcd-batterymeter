@@ -173,9 +173,11 @@ void setup() {
 	
 	lcd.begin(16, 2);
 	lcd.clear();
-	lcd << "hello";
+	lcd << "Code version:";
+	lcd.setCursor(0,1);
+	lcd << "2.0";
 	lcd.createChar(0, ohm);
-	delay(700);
+	delay(1200);
   
 }
 
