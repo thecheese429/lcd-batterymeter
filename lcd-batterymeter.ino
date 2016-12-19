@@ -1,3 +1,9 @@
+This project is distributed under a Creative Commons license.
+This code is written by thecheese429@gmail.com
+
+
+#include <Time.h>
+#include <TimeLib.h>
 #include <LiquidCrystal.h>
 template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg); return obj; } 
 
@@ -18,8 +24,8 @@ template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg);
 
 
 
-double now = 0;
-double lastTime = 0;
+unsigned long timeNow = 0;
+unsigned long lastTime = 0;
 double voltage = 0;
 double current = 0;
 double cellResistance = 0;
@@ -43,48 +49,36 @@ byte ohm[8] = {
 LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
 
 void updateDisplay(){
-	long currTime = now;
-	int hourTens = currTime/36000000;		//This is a very ugly way to get the digits to print the time.
-	currTime -= hourTens * 36000000;		//don't knock it. It works. Slowly.
-	int hourOnes = currTime / 3600000;
-	currTime -= hourOnes * 3600000;
-	int minuteTens = currTime / 600000;
-	currTime -= minuteTens * 600000;
-	int minuteOnes = currTime / 60000;
-	currTime -= minuteOnes * 60000;
-	int secondTens = currTime / 10000;
-	currTime -= secondTens * 10000;
-	int secondOnes = currTime / 1000;
+
 	
 	
-	
-	lcd.clear();
+	lcd.setCursor(0,0);
 	lcd.leftToRight();
-	lcd << "V=" << voltage << "v"; //Streaming (<<) is an easier way to write varied outputs like these
+	lcd << "V=" << voltage << "v "; //Streaming (<<) is an easier way to write varied outputs like these
 	lcd.setCursor(15,0);
 	lcd.rightToLeft();
-	lcd << "	" << current;		// this is a cheap way to write something on the right side of the screen
+	lcd << "	  " << current;		// this is a cheap way to write something on the right side of the screen
 	lcd.leftToRight();			// Write something right to left (minus one character), which puts the cursor in the righ location,	 
-	lcd << "I=" << current << "A";// then without moving the cursor, write the same thing left to right (with all the characters, this time)
+	lcd << " I=" << current << "A";// then without moving the cursor, write the same thing left to right (with all the characters, this time)
 	lcd.setCursor(0,1);
 	lcd.leftToRight();
-	lcd << (int)capacity << "mAh";	
+	lcd << (int)capacity << "mAh ";	
 	lcd.setCursor(8,1);
-	//lcd << hour(now) << ":" << minute(now) << ":" << second(now) ;
-	lcd << hourTens << hourOnes << ":" << minuteTens << minuteOnes << ":" << secondTens << secondOnes;
+	lcd << hour()/10 << hour() - hour()/10 << ":" << minute()/10 << minute() - 10*int(minute()/10) << ":" << second()/10 << second() - 10*int(second()/10) ;
+	//lcd << hourTens << hourOnes << ":" << minuteTens << minuteOnes << ":" << secondTens << secondOnes;
 }
 
 double capacityCalc(){
 	//take the measurements and check the time since last called, then return the charge that has passed since last call in units of mAh
-	return(current * (now - lastTime) / 3600 );
+	return(current * (timeNow - lastTime) / 3600 );
 }
 
 void updateMeasurements(){
 	int voltRaw = analogRead(VIN);		//read the values from the pins without doing any math
 	int shuntRaw = analogRead(SHUNT);	//so that the values are read as close to simultaneously as possible
 	
-	lastTime = now;		//shift now back to lastTime
-	now = millis();		//keep track of when the measurements were made
+	lastTime = timeNow;		//shift now back to lastTime
+	timeNow = millis();		//keep track of when the measurements were made
 	
 	voltage = (double)voltRaw *VOLTREF/1024;					//the voltage scales with 8 bits between 0 and the 5v reference pin
 	current = (double)(voltRaw - shuntRaw)*VOLTREF/1024 / SHUNTRES;	// sometimes the 5v pin isn't actually 5 volts, so we use VOLTREF instead of 5
@@ -175,7 +169,7 @@ void setup() {
 	lcd.clear();
 	lcd << "Code version:";
 	lcd.setCursor(0,1);
-	lcd << "2.0";
+	lcd << "2.002";
 	lcd.createChar(0, ohm);
 	delay(1200);
   
@@ -204,7 +198,7 @@ void loop() {
 	lcd << "then press reset";
 		while(state == 1){
 			updateMeasurements();
-			delay(50);
+			delay(INTERVAL);
 			if(voltage>1){
 				state = 2;
 			}
@@ -218,7 +212,7 @@ void loop() {
 			lcd.setCursor(0,1);
 			lcd << "V = " << voltage;
 			updateMeasurements();
-			delay(100);
+			delay(INTERVAL);
 		}
 		
 		
@@ -231,7 +225,7 @@ void loop() {
 			lcd.setCursor(0,1);
 			lcd << "V = " << voltage;
 			updateMeasurements();
-			delay(100);
+			delay(INTERVAL);
 		}
 		
 
@@ -251,9 +245,7 @@ void loop() {
 	}					 
 	else if(state == 5){ //This is the state in which the resistance is measured
 		readResistance();
-		if(cellResistance != 0){
-			state = 6;
-		}
+		state = 6;
 	}					 
 	else if(state == 6){ //This is the state in which the capacity is measured, after the resistance check, until the battery gets low
 		digitalWrite(GATE1, HIGH);
@@ -277,14 +269,14 @@ void loop() {
 		lcd.rightToLeft();
 		lcd << "R=" << cellResistance;
 		lcd.leftToRight();
-		lcd << "R= " << cellResistance;
+		lcd << "R=" << cellResistance;
 		lcd.write( byte(0) );
 		while(state==7){
 			if(voltage<.5){	//go to state 8 when the voltage drops below half a volt, or when the battery is removed.
 				state = 8;
 			}
 			updateMeasurements();
-			delay(100);
+			delay(INTERVAL);
 		}
 	}					 
 	else if(state == 8){ //This is the state after the check is complete and the battery is removed
@@ -303,7 +295,7 @@ void loop() {
 				state = 9;
 			}				
 			updateMeasurements();
-			delay(100);
+			delay(INTERVAL);
 		}
 	}					 
 	else if(state == 9){ //This is the state after the measurement is complete and a new battery has been inserted
